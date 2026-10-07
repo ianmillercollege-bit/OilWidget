@@ -43,4 +43,14 @@ Any Yahoo Finance ticker works the same way. For example, `HO=F` is heating oil 
 
 - Futures quotes may be about 10–15 minutes behind.
 - iOS decides when widgets refresh, usually every 15–30 minutes or so. The script asks for every 15.
-- If there's no internet, the widget shows the last prices it got, plus "offline" and the time.
+- If there's no internet, the widget shows the last prices it got, plus "offline". Rectangular and home screen widgets also show the last update time.
+
+## Tests
+
+Run the regression checks with Node.js 18 or newer:
+
+```sh
+node --test tests/OilWidget.test.cjs
+```
+
+These checks mock Scriptable APIs; verify appearance on an iPhone before release.

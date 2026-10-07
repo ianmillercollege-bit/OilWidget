@@ -37,9 +37,21 @@ async function fetchQuote(symbol) {
   const json = await req.loadJSON();
   const meta = json.chart.result[0].meta;
   const price = meta.regularMarketPrice;
+  if (!Number.isFinite(price)) throw new Error("Invalid price for " + symbol);
   const prev = meta.chartPreviousClose ?? meta.previousClose;
   const change = prev ? ((price - prev) / prev) * 100 : 0;
+  if (!Number.isFinite(change)) throw new Error("Invalid change for " + symbol);
   return { price, change };
+}
+
+function validCache(data) {
+  return data != null &&
+    Number.isFinite(data.updated) &&
+    Number.isFinite(new Date(data.updated).getTime()) &&
+    Array.isArray(data.quotes) && data.quotes.length === QUOTES.length &&
+    data.quotes.every((q, i) => q != null &&
+      q.label === QUOTES[i].label &&
+      Number.isFinite(q.price) && Number.isFinite(q.change));
 }
 
 async function loadQuotes() {
@@ -49,12 +61,20 @@ async function loadQuotes() {
       updated: Date.now(),
       quotes: QUOTES.map((q, i) => ({ label: q.label, ...results[i] })),
     };
-    fm.writeString(cachePath, JSON.stringify(data));
+    // A storage failure should not discard successfully fetched prices.
+    try {
+      fm.writeString(cachePath, JSON.stringify(data));
+    } catch (e) {}
     return { ...data, stale: false };
   } catch (e) {
     // Offline or the API hiccuped: fall back to the last good prices.
-    if (fm.fileExists(cachePath)) {
-      return { ...JSON.parse(fm.readString(cachePath)), stale: true };
+    try {
+      if (fm.fileExists(cachePath)) {
+        const cached = JSON.parse(fm.readString(cachePath));
+        if (validCache(cached)) return { ...cached, stale: true };
+      }
+    } catch (cacheError) {
+      // An unreadable or damaged cache is equivalent to having no cache.
     }
     return null;
   }
@@ -91,7 +111,7 @@ function buildRectangular(w, data) {
     label.font = Font.semiboldSystemFont(13);
     row.addSpacer();
     const value = row.addText(fmtPrice(q.price) + " " + arrow(q.change));
-    value.font = Font.monospacedDigitSystemFont(13, "regular");
+    value.font = Font.regularMonospacedSystemFont(13);
   }
   if (data.stale) {
     const s = w.addText("offline · " + fmtTime(data.updated));
@@ -102,7 +122,8 @@ function buildRectangular(w, data) {
 // Lock screen, line above the clock.
 function buildInline(w, data) {
   const parts = data.quotes.map((q) => q.label + " " + fmtPrice(q.price));
-  w.addText(parts.join("  "));
+  // Put the status first so truncation cannot hide that prices are cached.
+  w.addText((data.stale ? "offline · " : "") + parts.join("  "));
 }
 
 // Lock screen, small circle: shows just the first quote.
@@ -116,6 +137,11 @@ function buildCircular(w, data) {
   p.font = Font.boldSystemFont(16);
   p.centerAlignText();
   p.minimumScaleFactor = 0.5;
+  if (data.stale) {
+    const status = w.addText("offline");
+    status.font = Font.systemFont(9);
+    status.centerAlignText();
+  }
 }
 
 // Home screen (small / medium / large).
@@ -138,11 +164,11 @@ function buildHome(w, data) {
     const col = row.addStack();
     col.layoutVertically();
     const price = col.addText(fmtPrice(q.price));
-    price.font = Font.monospacedDigitSystemFont(14, "semibold");
+    price.font = Font.semiboldMonospacedSystemFont(14);
     price.textColor = Color.white();
     price.rightAlignText();
     const chg = col.addText(fmtChange(q.change));
-    chg.font = Font.monospacedDigitSystemFont(10, "regular");
+    chg.font = Font.regularMonospacedSystemFont(10);
     chg.textColor = q.change >= 0 ? new Color("#30d158") : new Color("#ff453a");
     w.addSpacer(4);
   }
