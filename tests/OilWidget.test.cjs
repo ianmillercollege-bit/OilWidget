@@ -23,7 +23,7 @@ async function run({ price = 61, offline = false, cache, readError = false, writ
     FileManager: { local: () => ({ documentsDirectory: () => '/', joinPath: () => '/cache', writeString: (_, s) => { if (writeError) throw Error('write'); stored = s; }, fileExists: () => stored !== undefined, readString: () => { if (readError) throw Error('read'); return stored; } }) },
     Request: class { async loadJSON() { if (offline) throw Error('offline'); return {chart: {result: [{meta: {regularMarketPrice: price, chartPreviousClose: 60}}]}}; } },
     // Deliberately expose only the documented methods used by this widget.
-    Font: {semiboldSystemFont() {}, boldSystemFont() {}, systemFont() {}, regularMonospacedSystemFont() {}, semiboldMonospacedSystemFont() {}},
+    Font: {semiboldSystemFont() {}, mediumSystemFont() {}, boldSystemFont() {}, systemFont() {}, regularMonospacedSystemFont() {}, semiboldMonospacedSystemFont() {}},
     DateFormatter: class { useShortTimeStyle() {} string() { return '10:00'; } },
     Color, ListWidget: Widget,
     config: {widgetFamily: family, runsInWidget: true},

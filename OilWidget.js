@@ -104,14 +104,17 @@ function fmtTime(ms) {
 
 // Lock screen, rectangular slot: three rows like the Stocks widget.
 function buildRectangular(w, data) {
+  // 17pt matches the Stocks lock screen widget; shrink a little when the
+  // offline line needs room.
+  const size = data.stale ? 14 : 17;
   for (const q of data.quotes) {
     const row = w.addStack();
     row.centerAlignContent();
     const label = row.addText(q.label);
-    label.font = Font.semiboldSystemFont(13);
+    label.font = Font.semiboldSystemFont(size);
     row.addSpacer();
     const value = row.addText(fmtPrice(q.price) + " " + arrow(q.change));
-    value.font = Font.regularMonospacedSystemFont(13);
+    value.font = Font.mediumSystemFont(size);
   }
   if (data.stale) {
     const s = w.addText("offline · " + fmtTime(data.updated));
